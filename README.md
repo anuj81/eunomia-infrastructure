@@ -4,7 +4,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-`docker-compose.yml` brings up all the bottom-of-stack services the Eunomia middleware depends on. The Keycloak realm is seeded from `keycloak/realm-export.json` so any developer gets the same users, roles, clients, and policies without manual UI clicks. The `verify_phase_d.py` script asserts the entire identity → authorization → execution → audit chain end-to-end against the live stack.
+`docker-compose.yml` brings up all the bottom-of-stack services the Eunomia middleware depends on. The Keycloak realm is seeded from `keycloak/realm-export.json` so any developer gets the same users, roles, clients, and policies without manual UI clicks. The `verify_phase_d.py` script asserts the entire identity → authorization → execution → audit chain end-to-end against the live stack .
 
 ---
 
