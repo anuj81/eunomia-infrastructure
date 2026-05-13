@@ -7,16 +7,35 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.0
     container_name: eunomia_keycloak
-    command: start-dev
+    # `--import-realm` makes Keycloak load any /opt/keycloak/data/import/*.json
+    # at startup. Idempotent: re-importing on an existing realm is a no-op by
+    # default. To force a re-import of dev data, run `docker-compose down -v`
+    # to wipe the dev-file DB, then `up -d keycloak` again.
+    command: start-dev --import-realm
     environment:
       KC_DB: dev-file
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      # Pin the externally-advertised hostname so JWT `iss` is stable across
+      # reachers (host shell, OM container, middleware) → all see iss=http://localhost:8080.
+      # KC_HOSTNAME_STRICT=false lets server-to-server traffic via the docker
+      # service name (`http://eunomia_keycloak:8080`) still work for JWKS fetch.
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
       JAVA_OPTS_APPEND: -Xms1024m -Xmx1024m
     ports:
       - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     networks:
       - app_net
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e 'GET /realms/eunomia/.well-known/openid-configuration HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q 200"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   mysql:
     container_name: openmetadata_mysql
@@ -88,13 +107,17 @@ services:
     container_name: openmetadata_server
     restart: always
     image: docker.getcollate.io/openmetadata/server:1.12.6
+    env_file:
+      # OIDC / multi-auth wiring (Keycloak). See ./openmetadata/env.openmetadata.
+      - ./openmetadata/env.openmetadata
     environment:
       OPENMETADATA_CLUSTER_NAME: openmetadata
       SERVER_PORT: 8585
       SERVER_ADMIN_PORT: 8586
       LOG_LEVEL: INFO
       AUTHORIZER_CLASS_NAME: org.openmetadata.service.security.DefaultAuthorizer
-      AUTHENTICATION_PROVIDER: basic
+      # AUTHENTICATION_PROVIDER now comes from env_file (= "multi"). Do NOT
+      # set it inline — `environment:` overrides `env_file:` in compose.
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: openmetadata_user

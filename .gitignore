@@ -1,0 +1,22 @@
+# Secrets
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtualenv
+venv/
+.venv/
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Local overrides for compose / OM env
+docker-compose.local.yml
+openmetadata/env.local

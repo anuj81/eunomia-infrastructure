@@ -1,0 +1,186 @@
+{
+  "realm": "eunomia",
+  "enabled": true,
+  "displayName": "Eunomia",
+  "registrationAllowed": false,
+  "rememberMe": false,
+  "verifyEmail": false,
+  "loginTheme": "keycloak",
+  "accessTokenLifespan": 3600,
+  "ssoSessionMaxLifespan": 36000,
+  "refreshTokenMaxReuse": 0,
+  "oauth2DeviceCodeLifespan": 600,
+  "oauth2DevicePollingInterval": 5,
+
+  "roles": {
+    "realm": [
+      { "name": "eunomia-finance-user",     "description": "Read access to Finance domain views." },
+      { "name": "eunomia-external-auditor", "description": "Read access to payment history view; PII always masked." },
+      { "name": "eunomia-marketing-lead",   "description": "Read access to Marketing domain views." },
+      { "name": "eunomia-agency-partner",   "description": "Read access to agency-safe Marketing views only." },
+      { "name": "eunomia-om-admin",         "description": "Catalog admin — sees ALL entities incl. gold base tables." },
+      { "name": "eunomia-pii-unmask",       "description": "Compositional role granting the holder the right to see PII columns unmasked." }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "eunomia-cli",
+      "name": "Eunomia CLI",
+      "description": "User-facing CLI. Uses OAuth2 Device Code flow.",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true",
+        "oauth2.device.polling.interval": "5"
+      },
+      "redirectUris": ["http://localhost/*"],
+      "webOrigins": ["+"],
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access"]
+    },
+
+    {
+      "clientId": "eunomia-middleware",
+      "name": "Eunomia Middleware (token validator)",
+      "description": "Validates JWTs against this realm's JWKS. Does not initiate flows.",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
+    },
+
+    {
+      "clientId": "openmetadata",
+      "name": "OpenMetadata Server",
+      "description": "OM uses this client for OIDC SSO (Custom-OIDC mode).",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "openmetadata-client-secret",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8585/*",
+        "http://openmetadata-server:8585/*"
+      ],
+      "webOrigins": ["http://localhost:8585"],
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email"]
+    },
+
+    {
+      "clientId": "eunomia-rag-indexer",
+      "name": "Eunomia RAG Indexer (service account)",
+      "description": "Indexer pulls full OM catalog using client_credentials grant.",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "rag-indexer-client-secret",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "defaultClientScopes": ["roles", "email"],
+      "protocolMappers": [
+        {
+          "name": "preferred-username-for-service-account",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "preferred_username",
+            "claim.value": "service-account-eunomia-rag-indexer",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "email-for-service-account",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "email",
+            "claim.value": "service-account-eunomia-rag-indexer@open-metadata.org",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "finance.alice",
+      "enabled": true,
+      "email": "finance.alice@open-metadata.org",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Finance",
+      "credentials": [{ "type": "password", "value": "test", "temporary": false }],
+      "realmRoles": ["eunomia-finance-user", "eunomia-pii-unmask"]
+    },
+    {
+      "username": "auditor.bob",
+      "enabled": true,
+      "email": "auditor.bob@open-metadata.org",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Auditor",
+      "credentials": [{ "type": "password", "value": "test", "temporary": false }],
+      "realmRoles": ["eunomia-external-auditor"]
+    },
+    {
+      "username": "marketing.carol",
+      "enabled": true,
+      "email": "marketing.carol@open-metadata.org",
+      "emailVerified": true,
+      "firstName": "Carol",
+      "lastName": "Marketing",
+      "credentials": [{ "type": "password", "value": "test", "temporary": false }],
+      "realmRoles": ["eunomia-marketing-lead", "eunomia-pii-unmask"]
+    },
+    {
+      "username": "agency.dave",
+      "enabled": true,
+      "email": "agency.dave@open-metadata.org",
+      "emailVerified": true,
+      "firstName": "Dave",
+      "lastName": "Agency",
+      "credentials": [{ "type": "password", "value": "test", "temporary": false }],
+      "realmRoles": ["eunomia-agency-partner"]
+    },
+    {
+      "username": "om.admin",
+      "enabled": true,
+      "email": "om.admin@open-metadata.org",
+      "emailVerified": true,
+      "firstName": "OM",
+      "lastName": "Admin",
+      "credentials": [{ "type": "password", "value": "test", "temporary": false }],
+      "realmRoles": ["eunomia-om-admin", "eunomia-pii-unmask"]
+    },
+    {
+      "username": "service-account-eunomia-rag-indexer",
+      "enabled": true,
+      "serviceAccountClientId": "eunomia-rag-indexer",
+      "realmRoles": ["eunomia-om-admin"]
+    }
+  ]
+}
